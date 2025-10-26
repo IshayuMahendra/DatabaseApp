@@ -14,7 +14,7 @@ public class Post extends BasicPost {
     /**
      * The number of hearts (likes) the post has received.
      */
-    private final int heartsCount;
+    private int heartsCount;
     
     /**
      * The number of comments the post has received.
@@ -24,12 +24,12 @@ public class Post extends BasicPost {
     /**
      * Flag indicating whether the post is hearted by the current user.
      */
-    private final boolean isHearted;
+    private boolean isHearted;
     
     /**
      * Flag indicating whether the post is bookmarked by the current user.
      */
-    private final boolean isBookmarked;
+    private boolean isBookmarked;
 
     /**
      * Flag to specify whether to show comments or not.
@@ -92,4 +92,18 @@ public class Post extends BasicPost {
     public boolean isBookmarked() {
         return isBookmarked;
     }
+        /** Updates the number of hearts (likes) on the post. */
+    public void setHeartsCount(int heartsCount) {
+        this.heartsCount = heartsCount;
+    }
+
+    /** Updates whether this post is hearted by the current user. */
+    public void setHearted(boolean isHearted) {
+        this.isHearted = isHearted;
+    }
+
+    public void setBookmarked(boolean isBookmarked) {
+    this.isBookmarked = isBookmarked;
+    }
 }
+

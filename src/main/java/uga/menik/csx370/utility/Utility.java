@@ -59,5 +59,4 @@ public class Utility {
             commentsForPost.size(), false, true, commentsForPost);
         return List.of(postWithComments);
     }
-
 }
