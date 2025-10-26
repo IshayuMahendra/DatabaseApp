@@ -15,8 +15,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
 
 import uga.menik.csx370.models.Post;
+import uga.menik.csx370.services.PostService;
 import uga.menik.csx370.services.UserService;
-import uga.menik.csx370.utility.Utility;
+
 
 /*
  * Added imports
@@ -36,6 +37,8 @@ public class ProfileController {
 
     // UserService has user login and registration related functions.
     private final UserService userService;
+    @Autowired
+    private PostService postService;
 
     /**
      * See notes in AuthInterceptor.java regarding how this works 
@@ -77,7 +80,8 @@ public class ProfileController {
 
         // Following line populates sample data.
         // You should replace it with actual data from the database.
-        List<Post> allPosts = Utility.createSamplePostsListWithoutComments();
+        List<Post> allPosts = postService.getPostsByUser(userId);//Utility.createSamplePostsListWithoutComments();
+
         //mv.addObject("posts", posts);
 
         List<Post> userPosts = allPosts.stream()

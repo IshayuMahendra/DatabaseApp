@@ -7,6 +7,7 @@ package uga.menik.csx370.controllers;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,14 +15,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 import uga.menik.csx370.models.Post;
+import uga.menik.csx370.services.PostService;
 import uga.menik.csx370.utility.Utility;
 
 /*
  * added imports
  */
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+
 
 /**
  * Handles /hashtagsearch URL and possibly others.
@@ -30,7 +31,8 @@ import java.util.Comparator;
 @Controller
 @RequestMapping("/hashtagsearch")
 public class HashtagSearchController {
-
+    @Autowired
+    private PostService postService;
     /**
      * This function handles the /hashtagsearch URL itself.
      * This URL can process a request parameter with name hashtags.
@@ -73,7 +75,7 @@ public class HashtagSearchController {
         } // for
 
         // Load posts (SAMPLE DATA, CONNECT TO DATABASE AND UPDATE)
-        List<Post> allPosts = Utility.createSamplePostsListWithoutComments();
+        List<Post> allPosts = postService.getAllPosts();//Utility.createSamplePostsListWithoutComments();
         List<Post> filtered = new ArrayList<Post>();
 
         // Filter posts with hashtags
