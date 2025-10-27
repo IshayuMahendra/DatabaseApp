@@ -1,19 +1,35 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Trending Hashtags</title>
-</head>
+{{> fragments/html_header}}
+
 <body>
-  <h2>🔥 Trending Hashtags</h2>
+  {{> fragments/top_bar}}
 
-  {{#hashtags}}
-    <p><a href="/search?tags={{.}}">{{.}}</a></p>
-  {{/hashtags}}
+    {{> fragments/no_content_message}}
 
-  {{^hashtags}}
-    <p>No hashtags trending yet.</p>
-  {{/hashtags}}
 
-  <a href="/">⬅ Back to Home</a>
+<div class="container framed">
+  <div class="posts">
+    {{#posts}}
+      <div class="post framed">
+        <p><strong>{{user.firstName}} {{user.lastName}}</strong></p>
+        <p>{{content}}</p>
+        <p><small>{{postDate}}</small></p>
+        <hr>
+      </div>
+    {{/posts}}
+
+    {{^posts}}
+      <p>No trending posts found.</p>
+    {{/posts}}
+  </div>
+</div>
+    
+
+
+
+    {{> fragments/followable_users_container}}
+
+    {{> fragments/footer}}
 </body>
 </html>

@@ -233,6 +233,8 @@ public class PostService {
                 pstmt.setInt(1, Integer.parseInt(userId));
                 pstmt.setString(2, content);
                 pstmt.executeQuery();
+                //-------------
+                updateHashtagCounts(content);
                 System.out.println("Post added to database by user " + userId);
 
         } catch (SQLException e) {
@@ -397,6 +399,8 @@ public class PostService {
         for (String tag : hashtags) {
             int tagId = getOrCreateHashtag(tag);
             jdbc.update("INSERT IGNORE INTO post_hashtag (postId, tagId) VALUES (?, ?)", postId, tagId);
+            jdbc.update("UPDATE hashtags SET usage_count = usage_count + 1 WHERE tag_id = ?", tagId);
+            //^
         }
     }
 
@@ -412,14 +416,14 @@ public class PostService {
     private int getOrCreateHashtag(String tagText) {
         final String finalTagText = tagText.toLowerCase();
 
-        String sql = "SELECT tagId FROM hashtag WHERE tagText = ?";
+        String sql = "SELECT tag_id FROM hashtags WHERE tag_text = ?";
         List<Integer> ids = jdbc.query(sql, (rs, row) -> rs.getInt(1), finalTagText);
         if (!ids.isEmpty()) return ids.get(0);
 
         KeyHolder kh = new GeneratedKeyHolder();
         jdbc.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
-                "INSERT INTO hashtag (tagText) VALUES (?)", Statement.RETURN_GENERATED_KEYS);
+                "INSERT INTO hashtags (tag_Text, usage_count) VALUES (?, 0)", Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, finalTagText);
             return ps;
         }, kh);
@@ -554,6 +558,29 @@ public boolean removeLike(int userId, int postId) {
         return false;
     }
 }
+
+private void updateHashtagCounts(String content) {
+    final String insertOrUpdate = 
+        "INSERT INTO hashtags (tag_text, usage_count) VALUES (?, 1) " +
+        "ON DUPLICATE KEY UPDATE usage_count = usage_count + 1";
+
+    Pattern pattern = Pattern.compile("#(\\w+)");
+    Matcher matcher = pattern.matcher(content);
+
+    try (Connection conn = dataSource.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(insertOrUpdate)) {
+
+        while (matcher.find()) {
+            String tag = "#" + matcher.group(1).toLowerCase();
+            stmt.setString(1, tag);
+            stmt.executeUpdate();
+        }
+        System.out.println("Updating hashtags for: " + content);
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+}
+
 
 
 } // PostService 
