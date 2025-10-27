@@ -15,8 +15,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
 
 import uga.menik.csx370.models.Post;
+import uga.menik.csx370.services.PostService;
 import uga.menik.csx370.services.UserService;
-import uga.menik.csx370.utility.Utility;
+
+
+/*
+ * Added imports
+ */
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.stream.Collectors;
+import uga.menik.csx370.models.User;
+
 
 /**
  * Handles /profile URL and its sub URLs.
@@ -27,6 +37,8 @@ public class ProfileController {
 
     // UserService has user login and registration related functions.
     private final UserService userService;
+    @Autowired
+    private PostService postService;
 
     /**
      * See notes in AuthInterceptor.java regarding how this works 
@@ -44,7 +56,11 @@ public class ProfileController {
     @GetMapping
     public ModelAndView profileOfLoggedInUser() {
         System.out.println("User is attempting to view profile of the logged in user.");
-        return profileOfSpecificUser(userService.getLoggedInUser().getUserId());
+        User currentUser = userService.getLoggedInUser();
+        if(currentUser == null) {
+            return new ModelAndView("redirect:/login");
+        }
+        return profileOfSpecificUser(currentUser.getUserId());
     }
 
     /**
@@ -62,8 +78,8 @@ public class ProfileController {
 
         // Following line populates sample data.
         // You should replace it with actual data from the database.
-        List<Post> posts = Utility.createSamplePostsListWithoutComments();
-        mv.addObject("posts", posts);
+        List<Post> userPosts = postService.getPostsByUser(userId);
+        mv.addObject("posts", userPosts);
 
         // If an error occured, you can set the following property with the
         // error message to show the error message to the user.
@@ -72,7 +88,9 @@ public class ProfileController {
 
         // Enable the following line if you want to show no content message.
         // Do that if your content list is empty.
-        // mv.addObject("isNoContent", true);
+        if(userPosts.isEmpty()) {
+            mv.addObject("isNoContent", true);
+        }
         
         return mv;
     }

@@ -21,6 +21,7 @@ import uga.menik.csx370.models.FollowableUser;
 import uga.menik.csx370.services.PeopleService;
 import uga.menik.csx370.services.UserService;
 import uga.menik.csx370.utility.Utility;
+import uga.menik.csx370.models.User;
 
 /**
  * Handles /people URL and its sub URL paths.
@@ -33,7 +34,9 @@ public class PeopleController {
     // See LoginController.java to see how to do this.
     // Hint: Add a constructor with @Autowired annotation.
 
+    @Autowired
     private final UserService userService;
+    @Autowired
     private final PeopleService peopleService;
 
     @Autowired
@@ -102,12 +105,31 @@ public class PeopleController {
         System.out.println("\tisFollow: " + isFollow);
 
         // Redirect the user if the comment adding is a success.
-        // return "redirect:/people";
+        try{ User currentUser = userService.getLoggedInUser();
+             if (currentUser == null) {
+             return "redirect:/login";
+            } // if
 
-        // Redirect the user with an error message if there was an error.
-        String message = URLEncoder.encode("Failed to (un)follow the user. Please try again.",
+            int followerId = Integer.parseInt(currentUser.getUserId());
+            int followingId = Integer.parseInt(userId);
+
+            if(!isFollow) {
+                peopleService.followUser((followerId), followingId);
+                System.out.println("User " + followerId + " followed " + followingId);
+            } else {
+                peopleService.unfollowUser((followerId), followingId);
+                System.out.println("User " + followerId + " unfollowed " + followingId);
+            } // if
+
+            return "redirect:/people";
+        } catch (Exception e) {
+                e.printStackTrace();
+                // Redirect the user with an error message if there was an error.
+                String message = URLEncoder.encode("Failed to (un)follow the user. Please try again.",
                 StandardCharsets.UTF_8);
-        return "redirect:/people?error=" + message;
+                return "redirect:/people?error=" + message;
+        } // try catch
+            
     }
 
 }

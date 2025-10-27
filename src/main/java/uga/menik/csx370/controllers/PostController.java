@@ -9,16 +9,21 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 import uga.menik.csx370.models.ExpandedPost;
 import uga.menik.csx370.utility.Utility;
+import uga.menik.csx370.services.PostService;
+import uga.menik.csx370.services.UserService;
+import uga.menik.csx370.models.User;
 
 /**
  * Handles /post URL and its sub urls.
@@ -27,6 +32,11 @@ import uga.menik.csx370.utility.Utility;
 @RequestMapping("/post")
 // Keep posts in memory so that like/comment changes persist temporarily
 public class PostController {
+
+    @Autowired
+    private UserService userService;
+    @Autowired
+    private PostService postService;
 
     /**
      * This function handles the /post/{postId} URL.
@@ -137,7 +147,8 @@ public class PostController {
      */
     @GetMapping("/{postId}/bookmark/{isAdd}")
     public String addOrRemoveBookmark(@PathVariable("postId") String postId,
-            @PathVariable("isAdd") Boolean isAdd) {
+            @PathVariable("isAdd") Boolean isAdd,
+            @RequestHeader(value = "Referer", required = false) String referer) {
         System.out.println("The user is attempting add or remove a bookmark:");
         System.out.println("\tpostId: " + postId);
         System.out.println("\tisAdd: " + isAdd);
@@ -160,13 +171,34 @@ public class PostController {
 
         // Redirect back to the same post page (refresh UI)
         return "redirect:/post/" + postId;
+        User currentUser = userService.getLoggedInUser();
+        if(currentUser == null) {
+            return "redirect:/login";
+        } // if
+        boolean success;
+        int uid = Integer.parseInt(currentUser.getUserId());
+        int pid = Integer.parseInt(postId);
+        if(isAdd) {
+            success = postService.addBookmark(uid, pid);
+        } else {
+            success = postService.removeBookmark(uid, pid);
+        } // if
 
-         } catch (Exception e) {
-        // Redirect the user with an error message if there was an error.
-        String message = URLEncoder.encode("Failed to (un)bookmark the post. Please try again.",
-                StandardCharsets.UTF_8);
-        return "redirect:/post/" + postId + "?error=" + message;
+        if(success) {
+            if (referer != null && !referer.isBlank()) {
+            return "redirect:" + referer;
         }
+            return "redirect:/post/" + postId;
+        } else {
+            
+            // Redirect the user with an error message if there was an error.
+            String message = URLEncoder.encode("Failed to (un)bookmark the post. Please try again.",
+                    StandardCharsets.UTF_8);
+            if(referer != null && !referer.isBlank()){
+                return "redirect:" + referer + "?error=" + message;
+            }
+            return "redirect:/post/" + postId + "?error=" + message;
+        } // if
     }
 
 }

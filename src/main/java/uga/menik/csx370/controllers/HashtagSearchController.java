@@ -17,6 +17,13 @@ import org.springframework.web.servlet.ModelAndView;
 import jakarta.servlet.http.HttpSession;
 import uga.menik.csx370.models.Post;
 import uga.menik.csx370.services.PostService;
+import uga.menik.csx370.utility.Utility;
+
+/*
+ * added imports
+ */
+import java.util.ArrayList;
+
 
 /**
  * Handles /hashtagsearch URL.
@@ -24,10 +31,15 @@ import uga.menik.csx370.services.PostService;
 @Controller
 @RequestMapping("/hashtagsearch")
 public class HashtagSearchController {
-
     @Autowired
     private PostService postService;
-
+    /**
+     * This function handles the /hashtagsearch URL itself.
+     * This URL can process a request parameter with name hashtags.
+     * In the browser the URL will look something like below:
+     * http://localhost:8081/hashtagsearch?hashtags=%23amazing+%23fireworks
+     * Note: the value of the hashtags is URL encoded.
+     */
     @GetMapping
     public ModelAndView search(@RequestParam("hashtags") String hashtags, HttpSession session) {
         Integer userId = (Integer) session.getAttribute("userId");
@@ -35,15 +47,90 @@ public class HashtagSearchController {
             return new ModelAndView("redirect:/login");
         }
 
-        String decodedQuery = URLDecoder.decode(hashtags, StandardCharsets.UTF_8);
-        List<Post> posts = postService.searchByHashtags(decodedQuery, userId);
-
+        // See notes on ModelAndView in BookmarksController.java.
         ModelAndView mv = new ModelAndView("posts_page");
+        /* 
+        // Following line populates sample data.
+        // You should replace it with actual data from the database.
+        List<Post> posts = Utility.createSamplePostsListWithoutComments();
         mv.addObject("posts", posts);
-        if (posts.isEmpty()) {
+
+        // If an error occured, you can set the following property with the
+        // error message to show the error message to the user.
+        // String errorMessage = "Some error occured!";
+        // mv.addObject("errorMessage", errorMessage);
+
+        // Enable the following line if you want to show no content message.
+        // Do that if your content list is empty.
+        // mv.addObject("isNoContent", true);
+        */
+        // Get hashtags
+        String[] parts = hashtags.trim().split("\\s+");
+        List<String> tags = new ArrayList<String>();
+        for(int i = 0; i < parts.length; i++) {
+            String tag = parts[i].trim();
+            if(!tag.isEmpty()) {
+                if(!tag.startsWith("#")) {
+                    tag = "#" + tag;
+                } // if
+                tags.add(tag.toLowerCase());
+            } // if
+        } // for
+
+        // Load posts (SAMPLE DATA, CONNECT TO DATABASE AND UPDATE)
+        List<Post> allPosts = postService.getAllPosts();//Utility.createSamplePostsListWithoutComments();
+        List<Post> filtered = new ArrayList<Post>();
+
+        // Filter posts with hashtags
+        for(Post p : allPosts) {
+            String content = p.getContent();
+            if(content == null) { continue; }
+            String lower = content.toLowerCase();
+            
+            boolean hasAll = true;
+            for(String tag : tags) {
+                if(lower.indexOf(tag) == -1) {
+                    hasAll = false;
+                    break;
+                } // if
+            } // for
+
+            boolean hasAHash = lower.indexOf('#') != -1;
+            if(hasAll && hasAHash) {
+                filtered.add(p);
+            } // if
+        } // for
+
+        // Sort by recent
+        java.util.Collections.sort(filtered, new java.util.Comparator<Post>() {
+            @Override
+            public int compare(Post a, Post b) {
+                java.time.LocalDate da = parseDate(a.getPostDate());
+                java.time.LocalDate db = parseDate(b.getPostDate());
+                return db.compareTo(da);
+            } // compare
+        }); // sort
+
+        // Add to mv
+        mv.addObject("posts", filtered);
+        if(filtered.isEmpty()) {
             mv.addObject("isNoContent", true);
-            mv.addObject("errorMessage", "No posts found for: " + decodedQuery);
-        }
+        } // if
+
         return mv;
     }
+
+    // Helper method to help parse date 
+    private java.time.LocalDate parseDate(String dateStr) {
+        try {
+            return java.time.LocalDate.parse(dateStr);
+        } catch (Exception e) {
+            try {
+                return java.time.LocalDate.parse(dateStr.substring(0, 10));
+            } catch (Exception e2) {
+                return java.time.LocalDate.MIN;
+            } // tryCatch
+        } // tryCatch
+    } // parseDate
+    
 }
