@@ -82,7 +82,6 @@ public class LoginController {
         }
 
         if (isAuthenticated) {
-            // FIXED: Set userId in session
             session.setAttribute("userId", Integer.valueOf(userService.getLoggedInUser().getUserId()));
 
             // Redirect to home page if authentication is successful.

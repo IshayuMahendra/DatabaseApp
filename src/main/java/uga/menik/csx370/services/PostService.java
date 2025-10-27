@@ -39,8 +39,6 @@ public class PostService {
     // CREATE POST + HASHTAGS
     @Transactional
     public void createPost(int userId, String content) {
-        System.out.println("PostService.createPost called with userId: " + userId + ", content: " + content); // Debug
-
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("Post cannot be empty");
         }
@@ -49,19 +47,14 @@ public class PostService {
 
         String sql = "INSERT INTO post (userId, content) VALUES (?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        int updated = jdbc.update(connection -> {
+        jdbc.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             ps.setInt(1, userId);
             ps.setString(2, trimmedContent);
             return ps;
         }, keyHolder);
 
-        if (updated == 0) {
-            throw new RuntimeException("No rows affected — post not inserted");
-        }
-
         int postId = keyHolder.getKey().intValue();
-        System.out.println("Post created with ID: " + postId); // Debug
 
         Set<String> hashtags = extractHashtags(trimmedContent);
         for (String tag : hashtags) {
@@ -96,7 +89,7 @@ public class PostService {
         return kh.getKey().intValue();
     }
 
-    // HOME FEED
+    // HOME FEED: YOUR POSTS + POSTS FROM PEOPLE YOU FOLLOW
     public List<Post> getHomeFeed(int currentUserId) {
         String sql = """
             SELECT p.postId, p.content, p.createdAt, u.userId, u.firstName, u.lastName,
@@ -118,8 +111,10 @@ public class PostService {
         return jdbc.query(sql, this::mapPost, currentUserId, currentUserId, currentUserId, currentUserId);
     }
 
-    // HASHTAG SEARCH
+    // HASHTAG SEARCH: ALL POSTS WITH GIVEN HASHTAG(S)
     public List<Post> searchByHashtags(String query, int currentUserId) {
+        if (query == null || query.trim().isEmpty()) return List.of();
+
         String[] tags = Arrays.stream(query.split("\\s+"))
                 .filter(s -> s.startsWith("#"))
                 .map(s -> s.substring(1).toLowerCase())
@@ -141,18 +136,15 @@ public class PostService {
                      "LEFT JOIN comments c ON c.postId = p.postId " +
                      "WHERE h.tagText IN (" + placeholders + ") " +
                      "GROUP BY p.postId, u.userId, u.firstName, u.lastName " +
-                     "HAVING COUNT(DISTINCT h.tagText) = ? " +
                      "ORDER BY p.createdAt DESC";
 
         List<Object> params = new ArrayList<>(Arrays.asList(tags));
         params.add(currentUserId);
         params.add(currentUserId);
-        params.add(tags.length);
 
         return jdbc.query(sql, this::mapPost, params.toArray());
     }
 
-    // FIXED: Uses your actual User constructor
     private Post mapPost(ResultSet rs, int row) throws SQLException {
         String postId = String.valueOf(rs.getInt("postId"));
         String content = rs.getString("content");
@@ -162,7 +154,6 @@ public class PostService {
         String firstName = rs.getString("firstName");
         String lastName = rs.getString("lastName");
 
-        // Uses your existing User(String, String, String) constructor
         User user = new User(userId, firstName, lastName);
 
         return new Post(
