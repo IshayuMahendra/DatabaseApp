@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Trending Hashtags</title>
+</head>
+<body>
+  <h2>🔥 Trending Hashtags</h2>
+
+  {{#hashtags}}
+    <p><a href="/search?tags={{.}}">{{.}}</a></p>
+  {{/hashtags}}
+
+  {{^hashtags}}
+    <p>No hashtags trending yet.</p>
+  {{/hashtags}}
+
+  <a href="/">⬅ Back to Home</a>
+</body>
+</html>

@@ -30,6 +30,8 @@ import uga.menik.csx370.models.User;
  */
 @Controller
 @RequestMapping("/post")
+// Keep posts in memory so that like/comment changes persist temporarily
+
 public class PostController {
 
     @Autowired
@@ -57,6 +59,7 @@ public class PostController {
         // Following line populates sample data.
         // You should replace it with actual data from the database.
         List<ExpandedPost> posts = Utility.createSampleExpandedPostWithComments();
+
         mv.addObject("posts", posts);
 
         // If an error occured, you can set the following property with the
@@ -87,11 +90,19 @@ public class PostController {
 
         // Redirect the user if the comment adding is a success.
         // return "redirect:/post/" + postId;
+        try {
+        // ✅ Simulate success (you can add real DB logic later)
+        System.out.println("Comment added successfully for post ID: " + postId);
 
+        // ✅ If success
+        return "redirect:/post/" + postId;
+
+        } catch (Exception e) {
         // Redirect the user with an error message if there was an error.
         String message = URLEncoder.encode("Failed to post the comment. Please try again.",
                 StandardCharsets.UTF_8);
         return "redirect:/post/" + postId + "?error=" + message;
+        }
     }
 
     /**
@@ -109,12 +120,25 @@ public class PostController {
 
         // Redirect the user if the comment adding is a success.
         // return "redirect:/post/" + postId;
+        try {
+        // Simulate like/unlike logic
+        if (isAdd) {
+            System.out.println("User liked post " + postId);
+        } else {
+            System.out.println("User unliked post " + postId);
+        }
 
+        // Success → redirect to the same post
+        return "redirect:/post/" + postId;
+
+        } catch (Exception e) {
         // Redirect the user with an error message if there was an error.
-        String message = URLEncoder.encode("Failed to (un)like the post. Please try again.",
-                StandardCharsets.UTF_8);
-        return "redirect:/post/" + postId + "?error=" + message;
+            String message = URLEncoder.encode("Failed to (un)like the post. Please try again.",
+                   StandardCharsets.UTF_8);
+            return "redirect:/post/" + postId + "?error=" + message;
+        }
     }
+    
 
     /**
      * Handles bookmarking posts.
