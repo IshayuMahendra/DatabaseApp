@@ -10,9 +10,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 import javax.sql.DataSource;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,8 +28,10 @@ import uga.menik.csx370.utility.Utility;
  */
 @Service
 public class PeopleService {
-    
+    @Autowired
     private final DataSource dataSource;
+    @Autowired
+    private PostService postService;
     
     @Autowired
     public PeopleService(DataSource dataSource) {
@@ -83,5 +87,70 @@ public class PeopleService {
         }
         return followableUsers;
     }
+
+    /*
+     * To follow user
+     */
+    public void followUser(int followerId, int followingId) {
+        final String sql = "insert ignore into follows (followerId, followingId) values (?, ?)";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, followerId);
+            pstmt.setInt(2, followingId);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    } // followUser
+
+    /*
+     * To unfollow user
+     */
+    public void unfollowUser(int followerId, int followingId) {
+        final String sql = "delete from follows where followerId = ? and followingId = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, followerId);
+            pstmt.setInt(2, followingId);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    } // unfollowUser
+
+    /*
+     * Get users except for loggedin user
+     */
+    public List<Map<String, String>> getAllUsersExcept(int loggedInUserId) {
+        List<Map<String, String>> users = new ArrayList<>();
+
+        final String sql = "SELECT userId, firstName, lastName FROM user WHERE userId != ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, loggedInUserId);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                int userId = rs.getInt("userId");
+                String first = rs.getString("firstName");
+                String last = rs.getString("lastName");
+
+                // Get last post time from PostService
+                String lastPostTime = postService.getLastPostTimeForUser(userId);
+
+                Map<String, String> item = new HashMap<>();
+                item.put("userId", String.valueOf(userId));
+                item.put("name", first + " " + last);
+                item.put("lastPostTime", lastPostTime);
+
+                users.add(item);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return users;
+    }
+
 
 }

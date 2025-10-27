@@ -16,6 +16,8 @@ import uga.menik.csx370.models.Post;
 import java.util.Collections;
 import java.util.Comparator;
 import uga.menik.csx370.models.User;
+import java.sql.Timestamp;
+import java.time.format.DateTimeFormatter;
 
 
 /*
@@ -177,5 +179,98 @@ public class PostService {
             e.printStackTrace();
         } // try catch
     } // toggleHeart
+
+    /*
+     * Adds bookmark
+     */
+    public boolean addBookmark(int userId, int postId) {
+        final String sql = "INSERT INTO bookmarks (userId, postId) VALUES (?, ?)";
+        try (Connection conn = dataSource.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, postId);
+            pstmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            // This might happen if they already bookmarked it
+            e.printStackTrace();
+            return false;
+        }
+    } // addBookmark
+
+    /*
+     * Removes bookmark
+     */
+    public boolean removeBookmark(int userId, int postId) {
+        final String sql = "DELETE FROM bookmarks WHERE userId = ? AND postId = ?";
+        try (Connection conn = dataSource.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, postId);
+            pstmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    } // removeBookmark
+    
+    /*
+     * List of posts bookmarked by user
+     */
+    public List<Post> getBookmarkedPosts(String userId) {
+        List<Post> posts = new ArrayList<>();
+        // check sql staement
+        String sql = "select p.postId, p.userId, p.content, p.createdAt, u.firstName, u.lastName from post p join bookmarks b on p.postId = b.postId join user u on p.userId = u.userId where b.userId = ? order by p.createdAt desc";
+
+        try(Connection conn = dataSource.getConnection(); 
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, userId);
+            ResultSet rs = pstmt.executeQuery();
+
+            while(rs.next()) {
+                String postId = String.valueOf(rs.getInt("postId"));
+                String content = rs.getString("content");
+                String createdAt = rs.getTimestamp("createdAt").toString();
+                String postUserId = String.valueOf(rs.getInt("userId"));
+                String firstName = rs.getString("firstName");
+                String lastName = rs.getString("lastName");
+                User user = new User(postUserId, firstName, lastName);
+                int heartsCount = 0;
+                int commentsCount = 0;
+                boolean isHearted = false;
+                boolean isBookmarked = true; // since these are bookmarked posts
+
+                Post post = new Post(postId, content, createdAt, user, heartsCount, commentsCount, isHearted, isBookmarked);
+                posts.add(post);
+            } // while
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } // try catch
+        return posts;
+    } // getBookmarkedPosts
+
+    /*
+     * Formats last
+     */
+    public String getLastPostTimeForUser(int userId) {
+        String sql = "SELECT createdAt FROM post WHERE userId = ? ORDER BY createdAt DESC LIMIT 1";
+        try (Connection conn = dataSource.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                Timestamp ts = rs.getTimestamp("createdAt");
+                if (ts != null) {
+                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MMM dd, yyyy, hh:mm a");
+                    return ts.toLocalDateTime().format(fmt);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return "No posts yet";
+    } // getLastPostTimeForUser
+
 
 } // PostService 
