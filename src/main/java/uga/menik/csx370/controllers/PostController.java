@@ -155,22 +155,6 @@ public class PostController {
 
         // Redirect the user if the comment adding is a success.
         // return "redirect:/post/" + postId;
-        try {
-        // Load the sample posts from Utility
-        java.util.List<uga.menik.csx370.models.Post> posts =
-                uga.menik.csx370.utility.Utility.createSamplePostsListWithoutComments();
-
-        // Find the matching post and update its bookmark status
-        for (uga.menik.csx370.models.Post p : posts) {
-            if (p.getPostId().equals(postId)) {
-                p.setBookmarked(isAdd);
-                System.out.println("Bookmark status for post " + postId + ": " + p.isBookmarked());
-                break;
-            }
-        }
-
-        // Redirect back to the same post page (refresh UI)
-        return "redirect:/post/" + postId;
         User currentUser = userService.getLoggedInUser();
         if(currentUser == null) {
             return "redirect:/login";
@@ -190,7 +174,7 @@ public class PostController {
         }
             return "redirect:/post/" + postId;
         } else {
-            
+
             // Redirect the user with an error message if there was an error.
             String message = URLEncoder.encode("Failed to (un)bookmark the post. Please try again.",
                     StandardCharsets.UTF_8);
@@ -200,5 +184,5 @@ public class PostController {
             return "redirect:/post/" + postId + "?error=" + message;
         } // if
     }
+    }
 
-}
