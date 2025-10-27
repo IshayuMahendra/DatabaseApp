@@ -61,8 +61,6 @@ public class ProfileController {
             return new ModelAndView("redirect:/login");
         }
         return profileOfSpecificUser(currentUser.getUserId());
-
-        //return profileOfSpecificUser(userService.getLoggedInUser().getUserId());
     }
 
     /**
@@ -80,19 +78,7 @@ public class ProfileController {
 
         // Following line populates sample data.
         // You should replace it with actual data from the database.
-        List<Post> allPosts = postService.getPostsByUser(userId);//Utility.createSamplePostsListWithoutComments();
-
-        //mv.addObject("posts", posts);
-
-        List<Post> userPosts = allPosts.stream()
-            .filter(p -> p.getUser() != null && String.valueOf(p.getUser().getUserId()).equals(userId))
-            .collect(Collectors.toList());
-        Collections.sort(userPosts, new Comparator<Post>() {
-            @Override
-            public int compare(Post a, Post b) {
-                return b.getPostDate().compareTo(a.getPostDate());
-            }
-        });
+        List<Post> userPosts = postService.getPostsByUser(userId);
         mv.addObject("posts", userPosts);
 
         // If an error occured, you can set the following property with the
@@ -102,7 +88,6 @@ public class ProfileController {
 
         // Enable the following line if you want to show no content message.
         // Do that if your content list is empty.
-        // mv.addObject("isNoContent", true);
         if(userPosts.isEmpty()) {
             mv.addObject("isNoContent", true);
         }
