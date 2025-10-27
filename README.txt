@@ -16,3 +16,20 @@ How to run (same as project instructions taken from that):
 
 Non-trivial feature information:
   The non-trivial feature that Khan added is the Trending Hashtags System, which identifies and displays the top 5 most frequently used hashtags by querying the database and updating the UI dynamically.
+
+New Feature: Trending Hashtags
+  
+  This feature adds a Trending Hashtags page that displays the top 5 most used hashtags across all posts. It helps users see what topics are currently popular on the platform.
+
+Access:
+  Visit http://localhost:8081/trending to view the trending list.
+
+Implementation:
+
+  UI: trending.mustache : shows hashtags with their usage counts.
+  
+  Controller: TrendingController.java : handles /trending requests and passes data to the view.
+  
+  Service: TrendingService.java : retrieves top hashtags from the database.
+  
+  SQL/Schema: Added a hashtags table
