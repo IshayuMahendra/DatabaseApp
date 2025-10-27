@@ -31,7 +31,6 @@ import uga.menik.csx370.models.User;
 @Controller
 @RequestMapping("/post")
 // Keep posts in memory so that like/comment changes persist temporarily
-
 public class PostController {
 
     @Autowired
@@ -91,10 +90,10 @@ public class PostController {
         // Redirect the user if the comment adding is a success.
         // return "redirect:/post/" + postId;
         try {
-        // ✅ Simulate success (you can add real DB logic later)
+        // Simulate success (you can add real DB logic later)
         System.out.println("Comment added successfully for post ID: " + postId);
 
-        // ✅ If success
+        // If success
         return "redirect:/post/" + postId;
 
         } catch (Exception e) {
@@ -156,6 +155,22 @@ public class PostController {
 
         // Redirect the user if the comment adding is a success.
         // return "redirect:/post/" + postId;
+        try {
+        // Load the sample posts from Utility
+        java.util.List<uga.menik.csx370.models.Post> posts =
+                uga.menik.csx370.utility.Utility.createSamplePostsListWithoutComments();
+
+        // Find the matching post and update its bookmark status
+        for (uga.menik.csx370.models.Post p : posts) {
+            if (p.getPostId().equals(postId)) {
+                p.setBookmarked(isAdd);
+                System.out.println("Bookmark status for post " + postId + ": " + p.isBookmarked());
+                break;
+            }
+        }
+
+        // Redirect back to the same post page (refresh UI)
+        return "redirect:/post/" + postId;
         User currentUser = userService.getLoggedInUser();
         if(currentUser == null) {
             return "redirect:/login";
