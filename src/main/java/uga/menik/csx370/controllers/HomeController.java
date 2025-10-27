@@ -9,22 +9,29 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
+import jakarta.servlet.http.HttpSession;
 import uga.menik.csx370.models.Post;
+import uga.menik.csx370.services.PostService;
 import uga.menik.csx370.utility.Utility;
 
 /**
  * This controller handles the home page and some of it's sub URLs.
  */
 @Controller
-@RequestMapping
+@RequestMapping("/")
 public class HomeController {
+
+    @Autowired
+    private PostService postService;
 
     /**
      * This is the specific function that handles the root URL itself.
@@ -34,14 +41,21 @@ public class HomeController {
      * See notes in HashtagSearchController.java regarding URL parameters.
      */
     @GetMapping
-    public ModelAndView webpage(@RequestParam(name = "error", required = false) String error) {
+    public ModelAndView webpage(@RequestParam(name = "error", required = false) String error, HttpSession session) {
         // See notes on ModelAndView in BookmarksController.java.
         ModelAndView mv = new ModelAndView("home_page");
 
-        // Following line populates sample data.
-        // You should replace it with actual data from the database.
-        List<Post> posts = Utility.createSamplePostsListWithoutComments();
-        mv.addObject("posts", posts);
+        Integer userId = (Integer) session.getAttribute("userId");
+
+        // If user is logged in → show real DB feed
+        if (userId != null) {
+            List<Post> posts = postService.getHomeFeed(userId);
+            mv.addObject("posts", posts);
+        } else {
+            // If not logged in → show sample posts (so UI is visible)
+            List<Post> posts = Utility.createSamplePostsListWithoutComments();
+            mv.addObject("posts", posts);
+        }
 
         // If an error occured, you can set the following property with the
         // error message to show the error message to the user.
@@ -65,16 +79,41 @@ public class HomeController {
      * from the input from the form after it is submitted.
      */
     @PostMapping("/createpost")
-    public String createPost(@RequestParam(name = "posttext") String postText) {
+    public String createPost(@RequestParam(name = "posttext") String postText, HttpSession session) {
         System.out.println("User is creating post: " + postText);
 
-        // Redirect the user if the post creation is a success.
-        // return "redirect:/";
+        Integer userId = (Integer) session.getAttribute("userId");
+        if (userId == null) {
+            return "redirect:/login";
+        }
 
-        // Redirect the user with an error message if there was an error.
-        String message = URLEncoder.encode("Failed to create the post. Please try again.",
-                StandardCharsets.UTF_8);
-        return "redirect:/?error=" + message;
+        if (postText == null || postText.trim().isEmpty()) {
+            String message = URLEncoder.encode("Post cannot be empty.", StandardCharsets.UTF_8);
+            return "redirect:/?error=" + message;
+        }
+
+        try {
+            postService.createPost(userId, postText.trim());
+            return "redirect:/";
+        } catch (Exception e) {
+            String message = URLEncoder.encode("Failed to create the post: " + e.getMessage(),
+                    StandardCharsets.UTF_8);
+            return "redirect:/?error=" + message;
+        }
     }
 
+    /**
+     * Handles GET /home - shows real feed from DB when logged in
+     */
+    @GetMapping("/home")
+    public String home(Model model, HttpSession session) {
+        Integer userId = (Integer) session.getAttribute("userId");
+        if (userId == null) {
+            return "redirect:/login";
+        }
+
+        List<Post> posts = postService.getHomeFeed(userId);
+        model.addAttribute("posts", posts);
+        return "home";
+    }
 }

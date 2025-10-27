@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
+import jakarta.servlet.http.HttpSession;
 import uga.menik.csx370.services.UserService;
 
 /**
@@ -66,7 +67,8 @@ public class LoginController {
      */
     @PostMapping
     public String login(@RequestParam("username") String username,
-            @RequestParam("password") String password) {
+                        @RequestParam("password") String password,
+                        HttpSession session) {
         boolean isAuthenticated = false;
 
         try {
@@ -80,6 +82,9 @@ public class LoginController {
         }
 
         if (isAuthenticated) {
+            // FIXED: Set userId in session
+            session.setAttribute("userId", Integer.valueOf(userService.getLoggedInUser().getUserId()));
+
             // Redirect to home page if authentication is successful.
             return "redirect:/";
         } else {
@@ -90,5 +95,4 @@ public class LoginController {
             return "redirect:/login?error=" + message;
         }
     }
-
 }

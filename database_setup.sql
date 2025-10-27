@@ -16,6 +16,7 @@ create table if not exists user (
     constraint userName_min_length check (char_length(trim(userName)) >= 2),
     constraint firstName_min_length check (char_length(trim(firstName)) >= 2),
     constraint lastName_min_length check (char_length(trim(lastName)) >= 2)
+);
 
 -- Create the post table.
 CREATE TABLE IF NOT EXISTS post (
@@ -38,6 +39,7 @@ CREATE TABLE IF NOT EXISTS likes (
     FOREIGN KEY (userId) REFERENCES user(userId),
     FOREIGN KEY (postId) REFERENCES post(postId)
 );
+
 -- Bookmarks for posts.
 CREATE TABLE IF NOT EXISTS bookmarks (
     bookmarkId INT AUTO_INCREMENT,
@@ -65,7 +67,7 @@ CREATE TABLE IF NOT EXISTS comments (
 -- Notifications for post interactions.
 CREATE TABLE IF NOT EXISTS notifications (
     notificationId INT AUTO_INCREMENT,
-    userId INT NOT NULL,         -- user receiving the notification
+    userId INT NOT NULL,
     message VARCHAR(255) NOT NULL,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     isRead BOOLEAN DEFAULT FALSE,
@@ -80,5 +82,26 @@ CREATE TABLE hashtags (
     usage_count INT DEFAULT 1
 );
 
+-- Hashtag table
+CREATE TABLE IF NOT EXISTS hashtag (
+    tagId INT AUTO_INCREMENT PRIMARY KEY,
+    tagText VARCHAR(100) NOT NULL UNIQUE
+);
 
+-- Junction: post hashtag
+CREATE TABLE IF NOT EXISTS post_hashtag (
+    postId INT NOT NULL,
+    tagId INT NOT NULL,
+    PRIMARY KEY (postId, tagId),
+    FOREIGN KEY (postId) REFERENCES post(postId) ON DELETE CASCADE,
+    FOREIGN KEY (tagId) REFERENCES hashtag(tagId) ON DELETE CASCADE
+);
+
+-- Follows table
+CREATE TABLE IF NOT EXISTS follow (
+    followerId INT NOT NULL,
+    followedId INT NOT NULL,
+    PRIMARY KEY (followerId, followedId),
+    FOREIGN KEY (followerId) REFERENCES user(userId) ON DELETE CASCADE,
+    FOREIGN KEY (followedId) REFERENCES user(userId) ON DELETE CASCADE
 );
