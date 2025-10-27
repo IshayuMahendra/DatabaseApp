@@ -6,12 +6,16 @@ This is a project developed by Dr. Menik to give the students an opportunity to 
 package uga.menik.csx370.controllers;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import uga.menik.csx370.models.Post;
@@ -24,6 +28,7 @@ import uga.menik.csx370.services.UserService;
  */
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 import uga.menik.csx370.models.User;
 
@@ -94,5 +99,28 @@ public class ProfileController {
         
         return mv;
     }
+
+            @PostMapping("/comment")
+        @ResponseBody
+        public Map<String, Object> addComment(
+                @RequestParam("postId") int postId,
+                @RequestParam("comment") String comment) {
+
+            Map<String, Object> response = new HashMap<>();
+            User currentUser = userService.getLoggedInUser();
+
+            if (currentUser == null) {
+                response.put("success", false);
+                response.put("message", "You must be logged in to comment.");
+                return response;
+            }
+
+            boolean success = postService.addComment(Integer.parseInt(currentUser.getUserId()), postId, comment);
+            int updatedCount = postService.getCommentsCount(postId);
+
+            response.put("success", success);
+            response.put("commentsCount", updatedCount);
+            return response;
+        }
     
 }

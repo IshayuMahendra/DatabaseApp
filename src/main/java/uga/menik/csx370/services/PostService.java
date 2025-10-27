@@ -174,34 +174,54 @@ public class PostService {
      * Gets posts by specific user
      */
     public List<Post> getPostsByUser(String userId) {
-        List<Post> posts = new ArrayList<>();
-        final String sql = "select * from post where userId = ? order by createdAt desc";
-        try(Connection conn = dataSource.getConnection(); 
-            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+    List<Post> posts = new ArrayList<>();
+    String sql = """
+        SELECT p.postId, p.userId, p.content, p.createdAt,
+               u.firstName, u.lastName,
+               COUNT(DISTINCT l.userId) as heartsCount,
+               EXISTS(SELECT 1 FROM likes l2 WHERE l2.postId = p.postId AND l2.userId = ?) as isHearted,
+               EXISTS(SELECT 1 FROM bookmarks b WHERE b.postId = p.postId AND b.userId = ?) as isBookmarked
+        FROM post p
+        JOIN user u ON p.userId = u.userId
+        LEFT JOIN likes l ON l.postId = p.postId
+        WHERE p.userId = ?
+        GROUP BY p.postId, u.userId, u.firstName, u.lastName
+        ORDER BY p.createdAt DESC
+    """;
 
-            pstmt.setInt(1, Integer.parseInt(userId));
-            ResultSet rs = pstmt.executeQuery();
+    try (Connection conn = dataSource.getConnection(); 
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            while(rs.next()) {
-                User user = getUserById(rs.getInt("userId"));
-                 Post post = new Post(
-                     String.valueOf(rs.getInt("postId")),
-                     rs.getString("content"),
-                     rs.getString("createdAt"),
-                     user,
-                     0,
-                     0,
-                     false,
-                     false
-                 );
-                 posts.add(post);
-            } // while
+        int loggedInUserId = Integer.parseInt(userId); // replace with session user if needed
+        pstmt.setInt(1, loggedInUserId); // for isHearted
+        pstmt.setInt(2, loggedInUserId); // for isBookmarked
+        pstmt.setInt(3, Integer.parseInt(userId)); // posts by this user
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } // try catch
-        return posts;
-    } // getPostsByUser
+        ResultSet rs = pstmt.executeQuery();
+        while (rs.next()) {
+            String postId = String.valueOf(rs.getInt("postId"));
+            String content = rs.getString("content");
+            String createdAt = rs.getTimestamp("createdAt").toString();
+            String postUserId = String.valueOf(rs.getInt("userId"));
+            String firstName = rs.getString("firstName");
+            String lastName = rs.getString("lastName");
+            int heartsCount = rs.getInt("heartsCount");
+            boolean isHearted = rs.getBoolean("isHearted");
+            boolean isBookmarked = rs.getBoolean("isBookmarked");
+
+            User user = new User(postUserId, firstName, lastName);
+            Post post = new Post(postId, content, createdAt, user, heartsCount, 0, isHearted, isBookmarked);
+            posts.add(post);
+        }
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+
+    return posts;
+}
+
+
 
     /*
      * Adding a new post
@@ -279,36 +299,52 @@ public class PostService {
      * List of posts bookmarked by user
      */
     public List<Post> getBookmarkedPosts(String userId) {
-        List<Post> posts = new ArrayList<>();
-        // check sql staement
-        String sql = "select p.postId, p.userId, p.content, p.createdAt, u.firstName, u.lastName from post p join bookmarks b on p.postId = b.postId join user u on p.userId = u.userId where b.userId = ? order by p.createdAt desc";
+    List<Post> posts = new ArrayList<>();
 
-        try(Connection conn = dataSource.getConnection(); 
-            PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, userId);
-            ResultSet rs = pstmt.executeQuery();
+    String sql = """
+        SELECT p.postId, p.userId, p.content, p.createdAt,
+               u.firstName, u.lastName,
+               COUNT(DISTINCT l.userId) as heartsCount,
+               EXISTS(SELECT 1 FROM likes l2 WHERE l2.postId = p.postId AND l2.userId = ?) as isHearted
+        FROM post p
+        JOIN user u ON p.userId = u.userId
+        JOIN bookmarks b ON b.postId = p.postId
+        LEFT JOIN likes l ON l.postId = p.postId
+        WHERE b.userId = ?
+        GROUP BY p.postId, u.userId, u.firstName, u.lastName
+        ORDER BY p.createdAt DESC
+    """;
 
-            while(rs.next()) {
-                String postId = String.valueOf(rs.getInt("postId"));
-                String content = rs.getString("content");
-                String createdAt = rs.getTimestamp("createdAt").toString();
-                String postUserId = String.valueOf(rs.getInt("userId"));
-                String firstName = rs.getString("firstName");
-                String lastName = rs.getString("lastName");
-                User user = new User(postUserId, firstName, lastName);
-                int heartsCount = 0;
-                int commentsCount = 0;
-                boolean isHearted = false;
-                boolean isBookmarked = true; // since these are bookmarked posts
+    try (Connection conn = dataSource.getConnection(); 
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-                Post post = new Post(postId, content, createdAt, user, heartsCount, commentsCount, isHearted, isBookmarked);
-                posts.add(post);
-            } // while
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } // try catch
-        return posts;
-    } // getBookmarkedPosts
+        pstmt.setInt(1, Integer.parseInt(userId));
+        pstmt.setInt(2, Integer.parseInt(userId));
+
+        ResultSet rs = pstmt.executeQuery();
+        while (rs.next()) {
+            String postId = String.valueOf(rs.getInt("postId"));
+            String content = rs.getString("content");
+            String createdAt = rs.getTimestamp("createdAt").toString();
+            String postUserId = String.valueOf(rs.getInt("userId"));
+            String firstName = rs.getString("firstName");
+            String lastName = rs.getString("lastName");
+            int heartsCount = rs.getInt("heartsCount");
+            boolean isHearted = rs.getBoolean("isHearted");
+            boolean isBookmarked = true;
+
+            User user = new User(postUserId, firstName, lastName);
+            Post post = new Post(postId, content, createdAt, user, heartsCount, 0, isHearted, isBookmarked);
+            posts.add(post);
+        }
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+
+    return posts;
+}
+
 
     /*
      * Formats last
@@ -390,20 +426,20 @@ public class PostService {
         return kh.getKey().intValue();
     }
 
-    // HOME FEED: YOUR POSTS + POSTS FROM PEOPLE YOU FOLLOW
+    //Get home feed
     public List<Post> getHomeFeed(int currentUserId) {
         String sql = """
             SELECT p.postId, p.content, p.createdAt, u.userId, u.firstName, u.lastName,
-                   COUNT(DISTINCT l.userId) as heartsCount,
-                   COUNT(DISTINCT c.commentId) as commentsCount,
-                   EXISTS(SELECT 1 FROM likes l2 WHERE l2.postId = p.postId AND l2.userId = ?) as isHearted,
-                   EXISTS(SELECT 1 FROM bookmarks b WHERE b.postId = p.postId AND b.userId = ?) as isBookmarked
+                COUNT(DISTINCT l.userId) as heartsCount,
+                COUNT(DISTINCT c.commentId) as commentsCount,
+                EXISTS(SELECT 1 FROM likes l2 WHERE l2.postId = p.postId AND l2.userId = ?) as isHearted,
+                EXISTS(SELECT 1 FROM bookmarks b WHERE b.postId = p.postId AND b.userId = ?) as isBookmarked
             FROM post p
             JOIN user u ON p.userId = u.userId
             LEFT JOIN likes l ON l.postId = p.postId
             LEFT JOIN comments c ON c.postId = p.postId
             WHERE p.userId = ? OR p.userId IN (
-                SELECT followedId FROM follow WHERE followerId = ?
+                SELECT followingId FROM follow WHERE followerId = ?
             )
             GROUP BY p.postId, u.userId, u.firstName, u.lastName
             ORDER BY p.createdAt DESC
@@ -411,6 +447,7 @@ public class PostService {
 
         return jdbc.query(sql, this::mapPost, currentUserId, currentUserId, currentUserId, currentUserId);
     }
+
 
     // HASHTAG SEARCH: ALL POSTS WITH GIVEN HASHTAG(S)
     public List<Post> searchByHashtags(String query, int currentUserId) {
@@ -468,6 +505,55 @@ public class PostService {
             rs.getBoolean("isBookmarked")
         );
     }
+
+     // Add a comment to a post
+public boolean addComment(int userId, int postId, String comment) {
+    if (comment == null || comment.isBlank()) return false;
+
+    String sql = "INSERT INTO comments (userId, postId, commentText, createdAt) VALUES (?, ?, ?, NOW())";
+    try {
+        jdbc.update(sql, userId, postId, comment.trim());
+        return true;
+    } catch (Exception e) {
+        e.printStackTrace();
+        return false;
+    }
+}
+
+// Get the number of comments for a post
+public int getCommentsCount(int postId) {
+    String sql = "SELECT COUNT(*) FROM comments WHERE postId = ?";
+    try {
+        Integer count = jdbc.queryForObject(sql, Integer.class, postId);
+        return count != null ? count : 0;
+    } catch (Exception e) {
+        e.printStackTrace();
+        return 0;
+    }
+}
+
+
+public boolean addLike(int userId, int postId) {
+    String sql = "INSERT IGNORE INTO likes (userId, postId) VALUES (?, ?)";
+    try {
+        jdbc.update(sql, userId, postId);
+        return true;
+    } catch (Exception e) {
+        e.printStackTrace();
+        return false;
+    }
+}
+
+public boolean removeLike(int userId, int postId) {
+    String sql = "DELETE FROM likes WHERE userId = ? AND postId = ?";
+    try {
+        jdbc.update(sql, userId, postId);
+        return true;
+    } catch (Exception e) {
+        e.printStackTrace();
+        return false;
+    }
+}
 
 
 } // PostService 

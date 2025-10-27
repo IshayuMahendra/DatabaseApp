@@ -82,25 +82,31 @@ public class PostController {
      */
     @PostMapping("/{postId}/comment")
     public String postComment(@PathVariable("postId") String postId,
-            @RequestParam(name = "comment") String comment) {
-        System.out.println("The user is attempting add a comment:");
-        System.out.println("\tpostId: " + postId);
-        System.out.println("\tcomment: " + comment);
+                            @RequestParam(name = "comment") String comment,
+                            @RequestHeader(value = "Referer", required = false) String referer) {
+        User currentUser = userService.getLoggedInUser();
+        if (currentUser == null) {
+            return "redirect:/login";
+        }
 
-        // Redirect the user if the comment adding is a success.
-        // return "redirect:/post/" + postId;
-        try {
-        // Simulate success (you can add real DB logic later)
-        System.out.println("Comment added successfully for post ID: " + postId);
+        int uid = Integer.parseInt(currentUser.getUserId());
+        int pid = Integer.parseInt(postId);
+        boolean success = postService.addComment(uid, pid, comment);
 
-        // If success
-        return "redirect:/post/" + postId;
-
-        } catch (Exception e) {
-        // Redirect the user with an error message if there was an error.
-        String message = URLEncoder.encode("Failed to post the comment. Please try again.",
-                StandardCharsets.UTF_8);
-        return "redirect:/post/" + postId + "?error=" + message;
+        if (success) {
+            if (referer != null && !referer.isBlank()) {
+                return "redirect:" + referer;
+            }
+            return "redirect:/post/" + postId;
+        } else {
+            String message = URLEncoder.encode(
+                "Failed to post the comment. Please try again.",
+                StandardCharsets.UTF_8
+            );
+            if (referer != null && !referer.isBlank()) {
+                return "redirect:" + referer + "?error=" + message;
+            }
+            return "redirect:/post/" + postId + "?error=" + message;
         }
     }
 
@@ -111,32 +117,40 @@ public class PostController {
      * get type form submissions and how path variables work.
      */
     @GetMapping("/{postId}/heart/{isAdd}")
-    public String addOrRemoveHeart(@PathVariable("postId") String postId,
-            @PathVariable("isAdd") Boolean isAdd) {
-        System.out.println("The user is attempting add or remove a heart:");
-        System.out.println("\tpostId: " + postId);
-        System.out.println("\tisAdd: " + isAdd);
-
-        // Redirect the user if the comment adding is a success.
-        // return "redirect:/post/" + postId;
-        try {
-        // Simulate like/unlike logic
-        if (isAdd) {
-            System.out.println("User liked post " + postId);
-        } else {
-            System.out.println("User unliked post " + postId);
-        }
-
-        // Success → redirect to the same post
-        return "redirect:/post/" + postId;
-
-        } catch (Exception e) {
-        // Redirect the user with an error message if there was an error.
-            String message = URLEncoder.encode("Failed to (un)like the post. Please try again.",
-                   StandardCharsets.UTF_8);
-            return "redirect:/post/" + postId + "?error=" + message;
-        }
+public String addOrRemoveHeart(@PathVariable("postId") String postId,
+                               @PathVariable("isAdd") Boolean isAdd,
+                               @RequestHeader(value = "Referer", required = false) String referer) {
+    User currentUser = userService.getLoggedInUser();
+    if (currentUser == null) {
+        return "redirect:/login";
     }
+
+    int uid = Integer.parseInt(currentUser.getUserId());
+    int pid = Integer.parseInt(postId);
+    boolean success;
+
+    if (isAdd) {
+        success = postService.addLike(uid, pid);
+    } else {
+        success = postService.removeLike(uid, pid);
+    }
+
+    if (success) {
+        if (referer != null && !referer.isBlank()) {
+            return "redirect:" + referer;
+        }
+        return "redirect:/post/" + postId;
+    } else {
+        String message = URLEncoder.encode(
+            "Failed to (un)like the post. Please try again.",
+            StandardCharsets.UTF_8
+        );
+        if (referer != null && !referer.isBlank()) {
+            return "redirect:" + referer + "?error=" + message;
+        }
+        return "redirect:/post/" + postId + "?error=" + message;
+    }
+}
     
 
     /**

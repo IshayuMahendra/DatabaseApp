@@ -161,7 +161,7 @@ CREATE TABLE hashtags (
 );
 
 -- Tracks who follows who
-create table if not exists follows (
+create table if not exists follow (
     followerId int not null,
     followingId int not null,
     createdAt datetime default CURRENT_TIMESTAMP,
