@@ -278,19 +278,27 @@ public class PostService {
     }
 
     private int getOrCreateHashtag(String tagText) {
-        final String finalTagText = tagText.toLowerCase();
-        String sql = "SELECT tagId FROM hashtag WHERE tagText = ?";
-        List<Integer> ids = jdbc.query(sql, (rs, row) -> rs.getInt(1), finalTagText);
-        if (!ids.isEmpty()) return ids.get(0);
-        KeyHolder kh = new GeneratedKeyHolder();
-        jdbc.update(connection -> {
-            PreparedStatement ps = connection.prepareStatement(
-                "INSERT INTO hashtag (tagText) VALUES (?)", Statement.RETURN_GENERATED_KEYS);
-            ps.setString(1, finalTagText);
-            return ps;
-        }, kh);
-        return kh.getKey().intValue();
+    final String finalTagText = tagText.toLowerCase();
+
+    String selectSql = "SELECT tag_id FROM hashtags WHERE tag_text = ?";
+    List<Integer> ids = jdbc.query(selectSql, (rs, row) -> rs.getInt(1), finalTagText);
+
+    if (!ids.isEmpty()) {
+        jdbc.update("UPDATE hashtags SET usage_count = usage_count + 1 WHERE tag_id = ?", ids.get(0));
+        return ids.get(0);
     }
+    KeyHolder kh = new GeneratedKeyHolder();
+    jdbc.update(connection -> {
+        PreparedStatement ps = connection.prepareStatement(
+            "INSERT INTO hashtags (tag_text, usage_count) VALUES (?, 1)", 
+            Statement.RETURN_GENERATED_KEYS
+        );
+        ps.setString(1, finalTagText);
+        return ps;
+    }, kh);
+
+    return kh.getKey().intValue();
+}
 
     public List<Post> getHomeFeed(int currentUserId) {
         String sql = """
