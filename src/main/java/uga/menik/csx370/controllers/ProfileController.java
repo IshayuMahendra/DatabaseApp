@@ -5,6 +5,7 @@ This is a project developed by Dr. Menik to give the students an opportunity to 
 */
 package uga.menik.csx370.controllers;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,18 +20,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import uga.menik.csx370.models.Post;
+import uga.menik.csx370.models.User;
 import uga.menik.csx370.services.PostService;
 import uga.menik.csx370.services.UserService;
-
-
-/*
- * Added imports
- */
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.stream.Collectors;
-import uga.menik.csx370.models.User;
 
 
 /**
