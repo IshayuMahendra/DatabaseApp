@@ -92,12 +92,14 @@ public class PeopleService {
      * To follow user
      */
     public void followUser(int followerId, int followingId) {
-        final String sql = "insert ignore into follows (followerId, followingId) values (?, ?)";
+        final String sql = "insert ignore into follow (followerId, followingId) values (?, ?)";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, followerId);
             pstmt.setInt(2, followingId);
             pstmt.executeUpdate();
+                    System.out.println(" FOLLOW inserted (" + followerId + ", " + followingId + ")");
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -106,17 +108,36 @@ public class PeopleService {
     /*
      * To unfollow user
      */
-    public void unfollowUser(int followerId, int followingId) {
-        final String sql = "delete from follows where followerId = ? and followingId = ?";
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, followerId);
-            pstmt.setInt(2, followingId);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    } // unfollowUser
+    public boolean unfollowUser(int followerId, int followingId) {
+    String sql = "DELETE FROM follow WHERE followerId = ? AND followingId = ?";
+    try (Connection conn = dataSource.getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        pstmt.setInt(1, followerId);
+        pstmt.setInt(2, followingId);
+        int rows = pstmt.executeUpdate();
+        System.out.println(" UNFOLLOW removed " + rows + " row(s)");
+        return rows > 0;
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return false;
+    }
+}
+
+
+public boolean isFollowing(int followerId, int followingId) {
+    final String sql = "SELECT 1 FROM follow WHERE followerId = ? AND followingId = ?";
+    try (Connection conn = dataSource.getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        pstmt.setInt(1, followerId);
+        pstmt.setInt(2, followingId);
+        ResultSet rs = pstmt.executeQuery();
+        return rs.next();
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return false;
+    }
+}
+
 
     /*
      * Get users except for loggedin user

@@ -97,39 +97,27 @@ public class PeopleController {
      * http://localhost:8081/people/1/follow/false
      * The above URL assigns 1 to userId and false to isFollow.
      */
-    @GetMapping("{userId}/follow/{isFollow}")
-    public String followUnfollowUser(@PathVariable("userId") String userId,
-            @PathVariable("isFollow") Boolean isFollow) {
-        System.out.println("User is attempting to follow/unfollow a user:");
-        System.out.println("\tuserId: " + userId);
-        System.out.println("\tisFollow: " + isFollow);
 
-        // Redirect the user if the comment adding is a success.
-        try{ User currentUser = userService.getLoggedInUser();
-             if (currentUser == null) {
-             return "redirect:/login";
-            } // if
+@GetMapping("{userId}/follow/{isFollow}")
+public String followUnfollowUser(@PathVariable("userId") String userId,
+                                 @PathVariable("isFollow") Boolean isFollow) {
 
-            int followerId = Integer.parseInt(currentUser.getUserId());
-            int followingId = Integer.parseInt(userId);
+    User currentUser = userService.getLoggedInUser();
+    if (currentUser == null) return "redirect:/login";
+    int followerId = Integer.parseInt(currentUser.getUserId());
+    int followingId = Integer.parseInt(userId);
+    boolean currentlyFollowing = peopleService.isFollowing(followerId, followingId);
 
-            if(!isFollow) {
-                peopleService.followUser((followerId), followingId);
-                System.out.println("User " + followerId + " followed " + followingId);
-            } else {
-                peopleService.unfollowUser((followerId), followingId);
-                System.out.println("User " + followerId + " unfollowed " + followingId);
-            } // if
-
-            return "redirect:/people";
-        } catch (Exception e) {
-                e.printStackTrace();
-                // Redirect the user with an error message if there was an error.
-                String message = URLEncoder.encode("Failed to (un)follow the user. Please try again.",
-                StandardCharsets.UTF_8);
-                return "redirect:/people?error=" + message;
-        } // try catch
-            
+    if (currentlyFollowing) {
+        peopleService.unfollowUser(followerId, followingId);
+        System.out.println("User " + followerId + " unfollowed " + followingId);
+    } else {
+        peopleService.followUser(followerId, followingId);
+        System.out.println("User " + followerId + " followed " + followingId);
     }
+
+    return "redirect:/people";
+}
+
 
 }
